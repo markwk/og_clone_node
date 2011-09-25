@@ -1,0 +1,70 @@
+<?php
+
+/*
+ * OG Clone Node module allows nodes to be cloned to new groups
+ * Depends on Node Clone Module
+*/
+
+
+/**
+* Implementation of hook_perm
+*/
+function og_clone_node_perm() {
+  return array('clone node to groups');  
+}
+
+/**
+* helper function for assessing access to the path
+*/
+function _og_clone_node_access() {
+  if (user_access('clone node to groups')) {
+    return true;
+  }
+  return false;
+}
+
+/**
+* Implementation of clone_node_alter
+* hook_clone_node_alter(&$node, $original_node, $method)
+* $method is either 'prepopulate' or 'save-edit'.
+*/
+// function og_clone_node_clone_node_alter(&$node, $original_node, $method) {}
+	
+function og_clone_node_clone_node_alter(&$node, $original_node, $method){
+
+}
+
+
+/**
+ * Implementation of hook_form_alter().
+ * hook_form_alter(&$form, &$form_state, $form_id)
+ */
+function og_clone_node_form_alter(&$form, &$form_state, $form_id) {
+	
+}
+
+
+/**
+ * Implementation of hook_nodeapi().
+ * hook_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL)
+ */
+function og_clone_node_form_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+	
+}
+
+
+
+/**
+* helper function to get the groups of the current user
+*/
+function _og_clone_node_get_list() {
+  global $user;
+  //select all groups the user has access to
+  $result = db_query(db_rewrite_sql("SELECT {node}.nid, title FROM {node} JOIN {og} ON {node}.nid = {og}.nid"));
+  //parse results and dump them into an array
+  while ($node = db_fetch_object($result)) {
+    $ary[$node->nid] = $node->title;
+  }
+  //return list of all groups the user has access to
+  return $ary;
+}

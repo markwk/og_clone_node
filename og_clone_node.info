@@ -1,0 +1,5 @@
+description = "Clone Copies of Nodes to Different Groups using Node Clone Module"
+name = "Clone Node to Group"
+dependencies[] = clone
+dependencies[] = og
+core = "6.x"
