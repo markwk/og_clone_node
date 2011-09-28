@@ -31,7 +31,12 @@ function _og_clone_node_access() {
 // function og_clone_node_clone_node_alter(&$node, $original_node, $method) {}
 	
 function og_clone_node_clone_node_alter(&$node, $original_node, $method){
-
+  if ($method == 'prepopulate') {
+    $node->content_clone = $original_node->nid;
+    if (empty($_POST['op'])) {
+      drupal_set_message(t('Select a group and submit a form.'));
+    }
+  }
 }
 
 
@@ -39,8 +44,24 @@ function og_clone_node_clone_node_alter(&$node, $original_node, $method){
  * Implementation of hook_form_alter().
  * hook_form_alter(&$form, &$form_state, $form_id)
  */
-function og_clone_node_form_alter(&$form, &$form_state, $form_id) {
-	
+function og_clone_node_form_alter(&$form, $form_state, $form_id) {
+	if ($form_id == 'page_node_form' && isset($form['clone_from_original_nid'])) {
+    watchdog('c_f_a', '<pre>'.print_r($form, TRUE).'</pre>');
+    if (isset($form['#node']->content_clone)) {
+      // don't need to create a clone in same group
+      unset($form['#node']->og_groups);
+      unset($form['#node']->og_groups_both);
+      // add a new field
+      $options = array(-1 => 'Select a group') + _og_clone_node_get_list();
+      $form['og_clone_node_group_to'] = array(
+        '#type' => 'select',
+        '#title' => 'Clone to group',
+        '#options' => $options,
+        '#weight' => -50,
+        '#access' => _og_clone_node_access(),
+      );
+    }
+  }
 }
 
 
@@ -48,11 +69,12 @@ function og_clone_node_form_alter(&$form, &$form_state, $form_id) {
  * Implementation of hook_nodeapi().
  * hook_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL)
  */
-function og_clone_node_form_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
-	
+ 
+function og_clone_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+	if ($op == 'insert' && isset($node->og_clone_node_group_to) && $node->og_clone_node_group_to != -1) {         
+    db_query("INSERT INTO {og_ancestry} (nid, group_nid) VALUES (%d, %d)", $node->nid, $node->og_clone_node_group_to);                    
+  }
 }
-
-
 
 /**
 * helper function to get the groups of the current user
@@ -60,7 +82,7 @@ function og_clone_node_form_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
 function _og_clone_node_get_list() {
   global $user;
   //select all groups the user has access to
-  $result = db_query(db_rewrite_sql("SELECT {node}.nid, title FROM {node} JOIN {og} ON {node}.nid = {og}.nid"));
+  $result = db_query("SELECT {node}.nid, title FROM {node} JOIN {og} ON {node}.nid = {og}.nid");
   //parse results and dump them into an array
   while ($node = db_fetch_object($result)) {
     $ary[$node->nid] = $node->title;
